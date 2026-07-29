@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Open Strings — a violin tuner</title>
+    <meta
+      name="description"
+      content="A browser-based violin tuner. Tunes in perfect fifths, like a real string player."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;1,400;1,500&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="masthead">
+        <p class="eyebrow">a violin tuner</p>
+        <h1>Open&nbsp;Strings</h1>
+        <p class="dek">
+          A tuner for the four open strings of the violin&mdash;
+          <em>G</em>, <em>D</em>, <em>A</em>, <em>E</em>&mdash;that
+          also tunes them in fifths, the way string players actually do it.
+        </p>
+      </header>
+
+      <div class="fleuron" aria-hidden="true">&#10086;</div>
+
+      <!-- Mode toggle -->
+      <nav class="mode-toggle" role="tablist" aria-label="Tuner mode">
+        <button class="mode is-active" role="tab" data-mode="single" aria-selected="true">
+          Single string
+        </button>
+        <button class="mode" role="tab" data-mode="fifths" aria-selected="false">
+          Perfect fifths
+        </button>
+      </nav>
+
+      <!-- Start card: mic permission -->
+      <section class="start-card" id="start-card">
+        <p class="start-copy">
+          This tuner listens to your microphone. Nothing is recorded, uploaded, or stored&mdash;audio is processed live in your browser and thrown away.
+        </p>
+        <button class="btn-start" id="btn-start">
+          Begin listening
+        </button>
+        <p class="start-hint">Grant mic permission when prompted. Chrome, Firefox, and Safari all work.</p>
+      </section>
+
+      <!-- Tuner display: single string mode -->
+      <section class="tuner" id="tuner-single" hidden>
+        <div class="target">
+          <span class="target-label">nearest open string</span>
+          <span class="target-note" id="target-note">&mdash;</span>
+          <span class="target-freq" id="target-freq">&mdash; Hz</span>
+        </div>
+
+        <!-- Cent trail: last ~2 seconds of pitch -->
+        <div class="trail-wrap">
+          <div class="trail-axis" aria-hidden="true">
+            <span class="axis-mark axis-flat">&minus;50&cent;</span>
+            <span class="axis-mark axis-tune">in tune</span>
+            <span class="axis-mark axis-sharp">+50&cent;</span>
+          </div>
+          <canvas id="trail" width="700" height="180" class="trail"></canvas>
+          <div class="trail-center-line" aria-hidden="true"></div>
+        </div>
+
+        <div class="readout">
+          <div>
+            <p class="readout-label">detected</p>
+            <p class="readout-value" id="detected-hz">&mdash; Hz</p>
+          </div>
+          <div>
+            <p class="readout-label">deviation</p>
+            <p class="readout-value" id="detected-cents">&mdash;</p>
+          </div>
+          <div>
+            <p class="readout-label">stability</p>
+            <p class="readout-value" id="stability">&mdash;</p>
+          </div>
+        </div>
+
+        <!-- Reference tones + string picker -->
+        <div class="strings">
+          <p class="strings-label">reference tone &middot; tap a string</p>
+          <div class="string-row">
+            <button class="string-btn" data-note="G3" data-freq="196.00">
+              <span class="s-letter">G</span>
+              <span class="s-hz">196.00 Hz</span>
+            </button>
+            <button class="string-btn" data-note="D4" data-freq="293.66">
+              <span class="s-letter">D</span>
+              <span class="s-hz">293.66 Hz</span>
+            </button>
+            <button class="string-btn" data-note="A4" data-freq="440.00">
+              <span class="s-letter">A</span>
+              <span class="s-hz">440.00 Hz</span>
+            </button>
+            <button class="string-btn" data-note="E5" data-freq="659.25">
+              <span class="s-letter">E</span>
+              <span class="s-hz">659.25 Hz</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tuner display: fifths mode -->
+      <section class="tuner fifths" id="tuner-fifths" hidden>
+        <p class="fifths-intro">
+          Bow two adjacent strings together. The tuner will find both
+          fundamentals and report how close the interval is to a pure
+          fifth &mdash; measured in beats per second.
+        </p>
+
+        <div class="fifth-display">
+          <div class="fifth-pair" id="fifth-pair">
+            <span class="fp-note" id="fp-lower">&mdash;</span>
+            <span class="fp-and">&amp;</span>
+            <span class="fp-note" id="fp-upper">&mdash;</span>
+          </div>
+
+          <div class="fifth-meter">
+            <p class="fifth-label">interval</p>
+            <p class="fifth-ratio" id="fifth-ratio">&mdash;</p>
+            <p class="fifth-cents" id="fifth-cents">&mdash; cents from pure</p>
+            <p class="fifth-beats" id="fifth-beats">&mdash; Hz beating</p>
+          </div>
+        </div>
+
+        <p class="fifth-hint">
+          <em>Pure fifth = 3:2 ratio. Beats disappear when the interval is exact.</em>
+        </p>
+      </section>
+
+      <div class="fleuron" aria-hidden="true">&#10086;</div>
+
+      <!-- Reference / colophon -->
+      <section class="colophon">
+        <div class="col">
+          <h3>How it works</h3>
+          <p>
+            The microphone feeds a WebAudio graph in your browser. Pitch
+            is detected using the <em>YIN</em> algorithm&mdash;a
+            time-domain method that estimates the fundamental frequency
+            by finding the point of minimum &lsquo;difference&rsquo; in
+            the signal against itself. In fifths mode, a short FFT
+            picks the two strongest low-frequency peaks and reports the
+            beat frequency between their nearest harmonic pair.
+          </p>
+        </div>
+        <div class="col">
+          <h3>Why fifths</h3>
+          <p>
+            Violinists tune by ear, string against string, listening for
+            beats to disappear&mdash;not by chasing four separate
+            needles. Every browser tuner I could find ignored this.
+            Perfect-fifth mode is the reason this one exists.
+          </p>
+        </div>
+      </section>
+
+      <footer class="foot">
+        <p>
+          Built by
+          <a href="https://aaryagupta4.github.io/" target="_blank" rel="noopener">Aarya Gupta</a>
+          &middot;
+          <a href="https://github.com/aaryagupta4/open-strings" target="_blank" rel="noopener">source</a>
+          &middot; <em>Finis.</em>
+        </p>
+      </footer>
+    </main>
+
+    <script src="./yin.js" defer></script>
+    <script src="./app.js" defer></script>
+  </body>
+</html>
